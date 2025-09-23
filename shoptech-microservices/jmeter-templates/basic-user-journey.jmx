@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2">
+  <hashTree>
+    <TestPlan testname="ShopTech Basic User Journey" enabled="true">
+      <stringProp name="TestPlan.comments">Basic user journey test for ShopTech e-commerce platform</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.arguments" elementType="Arguments">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"></stringProp>
+    </TestPlan>
+    <hashTree>
+      <!-- Configuration Elements -->
+      <Arguments testname="Test Configuration" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="base.url" elementType="Argument">
+            <stringProp name="Argument.name">base.url</stringProp>
+            <stringProp name="Argument.value">${__P(base.url,localhost)}</stringProp>
+          </elementProp>
+          <elementProp name="auth.port" elementType="Argument">
+            <stringProp name="Argument.name">auth.port</stringProp>
+            <stringProp name="Argument.value">${__P(auth.port,8081)}</stringProp>
+          </elementProp>
+          <elementProp name="user.port" elementType="Argument">
+            <stringProp name="Argument.name">user.port</stringProp>
+            <stringProp name="Argument.value">${__P(user.port,8082)}</stringProp>
+          </elementProp>
+          <elementProp name="product.port" elementType="Argument">
+            <stringProp name="Argument.name">product.port</stringProp>
+            <stringProp name="Argument.value">${__P(product.port,8083)}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </Arguments>
+      <hashTree/>
+
+      <!-- CSV Data Set -->
+      <CSVDataSet testname="User Data" enabled="true">
+        <stringProp name="delimiter">,</stringProp>
+        <stringProp name="fileEncoding">UTF-8</stringProp>
+        <stringProp name="filename">${__P(test.data.path,./data)}/users.csv</stringProp>
+        <boolProp name="ignoreFirstLine">true</boolProp>
+        <boolProp name="quotedData">false</boolProp>
+        <boolProp name="recycle">true</boolProp>
+        <stringProp name="shareMode">shareMode.all</stringProp>
+        <boolProp name="stopThread">false</boolProp>
+        <stringProp name="variableNames">username,password,email,userType,region</stringProp>
+      </CSVDataSet>
+      <hashTree/>
+
+      <!-- HTTP Header Manager -->
+      <HeaderManager testname="HTTP Header Manager" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Accept</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">X-Correlation-ID</stringProp>
+            <stringProp name="Header.value">${__UUID()}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- Main Thread Group -->
+      <ThreadGroup testname="User Journey Thread Group" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(threads,10)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(rampup,60)}</stringProp>
+        <longProp name="ThreadGroup.start_time">1578876963000</longProp>
+        <longProp name="ThreadGroup.end_time">1578876963000</longProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+      <hashTree>
+        
+        <!-- Step 1: User Login -->
+        <HTTPSamplerProxy testname="1. User Login" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${base.url}</stringProp>
+          <stringProp name="HTTPSampler.port">${auth.port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/auth/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <stringProp name="Argument.value">{
+  "username": "${username}",
+  "password": "${password}"
+}</stringProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- Extract Auth Token -->
+          <JSONExtractor testname="Extract Auth Token" enabled="true">
+            <stringProp name="JSONExtractor.referenceNames">authToken</stringProp>
+            <stringProp name="JSONExtractor.jsonPathExpressions">$.token</stringProp>
+            <stringProp name="JSONExtractor.defaultValues">AUTH_FAILED</stringProp>
+            <stringProp name="JSONExtractor.matchNumbers">1</stringProp>
+          </JSONExtractor>
+          <hashTree/>
+          
+          <!-- Extract User ID -->
+          <JSONExtractor testname="Extract User ID" enabled="true">
+            <stringProp name="JSONExtractor.referenceNames">userId</stringProp>
+            <stringProp name="JSONExtractor.jsonPathExpressions">$.user_id</stringProp>
+            <stringProp name="JSONExtractor.defaultValues">USER_ID_FAILED</stringProp>
+            <stringProp name="JSONExtractor.matchNumbers">1</stringProp>
+          </JSONExtractor>
+          <hashTree/>
+          
+          <!-- Assertion -->
+          <ResponseAssertion testname="Login Success Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="200">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">1</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Step 2: Get User Profile -->
+        <HTTPSamplerProxy testname="2. Get User Profile" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${base.url}</stringProp>
+          <stringProp name="HTTPSampler.port">${user.port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/users/${userId}/profile</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- Authorization Header -->
+          <HeaderManager testname="Authorization Header" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${authToken}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          
+          <!-- Assertion -->
+          <ResponseAssertion testname="Profile Success Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="200">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">1</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Step 3: Browse Products -->
+        <HTTPSamplerProxy testname="3. Browse Products" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">1</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">page</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">20</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+                <stringProp name="Argument.name">limit</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${base.url}</stringProp>
+          <stringProp name="HTTPSampler.port">${product.port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/products</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- Extract Product ID -->
+          <JSONExtractor testname="Extract Product ID" enabled="true">
+            <stringProp name="JSONExtractor.referenceNames">productId</stringProp>
+            <stringProp name="JSONExtractor.jsonPathExpressions">$.products[0].product_id</stringProp>
+            <stringProp name="JSONExtractor.defaultValues">PRODUCT_ID_FAILED</stringProp>
+            <stringProp name="JSONExtractor.matchNumbers">1</stringProp>
+          </JSONExtractor>
+          <hashTree/>
+          
+          <!-- Assertion -->
+          <ResponseAssertion testname="Products Success Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="200">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">1</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Step 4: Get Product Details -->
+        <HTTPSamplerProxy testname="4. Get Product Details" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${base.url}</stringProp>
+          <stringProp name="HTTPSampler.port">${product.port}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/api/v1/products/${productId}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <!-- Extract Product Price -->
+          <JSONExtractor testname="Extract Product Price" enabled="true">
+            <stringProp name="JSONExtractor.referenceNames">productPrice</stringProp>
+            <stringProp name="JSONExtractor.jsonPathExpressions">$.price</stringProp>
+            <stringProp name="JSONExtractor.defaultValues">0</stringProp>
+            <stringProp name="JSONExtractor.matchNumbers">1</stringProp>
+          </JSONExtractor>
+          <hashTree/>
+          
+          <!-- Assertion -->
+          <ResponseAssertion testname="Product Details Success Assertion" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="200">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">1</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Think Time -->
+        <UniformRandomTimer testname="Think Time" enabled="true">
+          <stringProp name="ConstantTimer.delay">1000</stringProp>
+          <stringProp name="RandomTimer.range">2000</stringProp>
+        </UniformRandomTimer>
+        <hashTree/>
+
+      </hashTree>
+
+      <!-- Results Tree (for debugging) -->
+      <ResultCollector testname="View Results Tree" enabled="true">
+        <boolProp name="ResultCollector.errorLogging">false</boolProp>
+        <objProp>
+          <n>saveConfig</n>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <sampleCount>true</sampleCount>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+      <!-- Summary Report -->
+      <ResultCollector testname="Summary Report" enabled="true">
+        <boolProp name="ResultCollector.errorLogging">false</boolProp>
+        <objProp>
+          <n>saveConfig</n>
+          <value class="SampleSaveConfiguration">
+            <time>true</time>
+            <latency>true</latency>
+            <timestamp>true</timestamp>
+            <success>true</success>
+            <label>true</label>
+            <code>true</code>
+            <message>true</message>
+            <threadName>true</threadName>
+            <dataType>true</dataType>
+            <encoding>false</encoding>
+            <assertions>true</assertions>
+            <subresults>true</subresults>
+            <responseData>false</responseData>
+            <samplerData>false</samplerData>
+            <xml>false</xml>
+            <fieldNames>false</fieldNames>
+            <responseHeaders>false</responseHeaders>
+            <requestHeaders>false</requestHeaders>
+            <responseDataOnError>false</responseDataOnError>
+            <saveAssertionResultsFailureMessage>false</saveAssertionResultsFailureMessage>
+            <assertionsResultsToSave>0</assertionsResultsToSave>
+            <bytes>true</bytes>
+            <url>true</url>
+            <threadCounts>true</threadCounts>
+            <sampleCount>true</sampleCount>
+          </value>
+        </objProp>
+        <stringProp name="filename"></stringProp>
+      </ResultCollector>
+      <hashTree/>
+
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

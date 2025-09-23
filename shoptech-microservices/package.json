@@ -1,0 +1,27 @@
+{
+  "name": "shoptech-microservices",
+  "version": "1.0.0",
+  "description": "E-commerce microservices system for JMeter performance testing education",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:auth": "cd services/auth-service && npm start",
+    "start:user": "cd services/user-service && npm start",
+    "start:product": "cd services/product-service && npm start",
+    "start:cart": "cd services/cart-service && npm start",
+    "start:order": "cd services/order-service && npm start",
+    "start:payment": "cd services/payment-service && npm start",
+    "install:all": "npm install && cd services/auth-service && npm install && cd ../user-service && npm install && cd ../product-service && npm install && cd ../cart-service && npm install && cd ../order-service && npm install && cd ../payment-service && npm install",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "generate:data": "node scripts/generate-test-data.js"
+  },
+  "keywords": ["microservices", "jmeter", "performance-testing", "education", "e-commerce"],
+  "author": "UTEC Performance Testing Course",
+  "license": "MIT",
+  "devDependencies": {
+    "faker": "^5.5.3"
+  }
+}
