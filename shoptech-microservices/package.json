@@ -18,10 +18,19 @@
     "docker:logs": "docker-compose logs -f",
     "generate:data": "node scripts/generate-test-data.js"
   },
-  "keywords": ["microservices", "jmeter", "performance-testing", "education", "e-commerce"],
+  "keywords": [
+    "microservices",
+    "jmeter",
+    "performance-testing",
+    "education",
+    "e-commerce"
+  ],
   "author": "UTEC Performance Testing Course",
   "license": "MIT",
   "devDependencies": {
     "faker": "^5.5.3"
+  },
+  "dependencies": {
+    "axios": "^1.12.2"
   }
 }

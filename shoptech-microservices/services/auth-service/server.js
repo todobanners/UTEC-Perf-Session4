@@ -6,6 +6,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const winston = require('winston');
+const fs = require('fs');
+const path = require('path');
 // Initialize metrics
 const { createMetrics } = require('./metrics');
 const { register, metricsMiddleware, recordOperation } = createMetrics('auth_service');
@@ -36,7 +38,7 @@ app.use(metricsMiddleware);
 // Rate limiting
 const authLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 100 requests per windowMs
   message: 'Too many authentication requests from this IP'
 });
 
@@ -45,30 +47,83 @@ app.use('/api/v1/auth', authLimiter);
 // Mock user database (in production this would be a real database)
 const users = new Map();
 
-// Initialize with test users
-const testUsers = [
-  { username: 'john_doe', password: 'password123', email: 'john@example.com', role: 'standard' },
-  { username: 'jane_smith', password: 'password123', email: 'jane@example.com', role: 'premium' },
-  { username: 'admin_user', password: 'admin123', email: 'admin@shoptech.com', role: 'admin' },
-  { username: 'test_user1', password: 'test123', email: 'test1@example.com', role: 'standard' },
-  { username: 'test_user2', password: 'test123', email: 'test2@example.com', role: 'premium' }
-];
-
-// Hash passwords and store users
-(async () => {
-  for (const user of testUsers) {
-    const hashedPassword = await bcrypt.hash(user.password, 10);
-    const userId = uuidv4();
-    users.set(user.username, {
-      user_id: userId,
-      username: user.username,
-      password: hashedPassword,
-      email: user.email,
-      role: user.role,
-      created_at: new Date().toISOString()
-    });
+// Function to parse CSV data
+function parseCSV(csvText) {
+  const lines = csvText.trim().split('\n');
+  const headers = lines[0].split(',');
+  const result = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',');
+    const obj = {};
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = values[j];
+    }
+    result.push(obj);
   }
-})();
+  
+  return result;
+}
+
+// Load users from CSV file
+async function loadUsersFromCSV() {
+  try {
+    // Path to the CSV file (mounted as volume in Docker)
+    const csvPath = path.join(__dirname, 'data/users.csv');
+    const csvData = fs.readFileSync(csvPath, 'utf8');
+    const csvUsers = parseCSV(csvData);
+    
+    logger.info(`Loading ${csvUsers.length} users from CSV file`);
+    
+    // Hash passwords and store users
+    for (const user of csvUsers) {
+      if (user.username && user.password && user.email && user.userType) {
+        const hashedPassword = await bcrypt.hash(user.password, 10);
+        const userId = uuidv4();
+        users.set(user.username, {
+          user_id: userId,
+          username: user.username,
+          password: hashedPassword,
+          email: user.email,
+          role: user.userType, // CSV uses 'userType' field
+          region: user.region,
+          created_at: new Date().toISOString()
+        });
+      }
+    }
+    
+    logger.info(`Successfully loaded ${users.size} users from CSV`);
+  } catch (error) {
+    logger.error('Failed to load users from CSV:', error.message);
+    
+    // Fallback to test users if CSV loading fails
+    const testUsers = [
+      { username: 'john_doe', password: 'password123', email: 'john@example.com', role: 'standard' },
+      { username: 'jane_smith', password: 'password123', email: 'jane@example.com', role: 'premium' },
+      { username: 'admin_user', password: 'admin123', email: 'admin@shoptech.com', role: 'admin' },
+      { username: 'test_user1', password: 'test123', email: 'test1@example.com', role: 'standard' },
+      { username: 'test_user2', password: 'test123', email: 'test2@example.com', role: 'premium' }
+    ];
+    
+    for (const user of testUsers) {
+      const hashedPassword = await bcrypt.hash(user.password, 10);
+      const userId = uuidv4();
+      users.set(user.username, {
+        user_id: userId,
+        username: user.username,
+        password: hashedPassword,
+        email: user.email,
+        role: user.role,
+        created_at: new Date().toISOString()
+      });
+    }
+    
+    logger.warn('Loaded fallback test users due to CSV loading failure');
+  }
+}
+
+// Initialize users
+loadUsersFromCSV();
 
 // Middleware to add correlation ID
 app.use((req, res, next) => {
@@ -153,7 +208,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
       action: 'login_success',
       username: username,
       responseTime: responseTime,
-      correlationId: req.correlationId
+      correlationId: req.correlationId,
+      user_id: user.user_id
     });
 
     recordOperation('login', true);

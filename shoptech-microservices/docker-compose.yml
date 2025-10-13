@@ -16,6 +16,7 @@ services:
       - shoptech-network
     volumes:
       - ./logs:/app/logs
+      - ./data:/app/data
 
   # User Profile Service
   user-service:
@@ -49,6 +50,7 @@ services:
       - shoptech-network
     volumes:
       - ./logs:/app/logs
+      - ./data:/app/data
 
   # Shopping Cart Service
   cart-service:

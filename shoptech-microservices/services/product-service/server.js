@@ -4,6 +4,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const winston = require('winston');
+const fs = require('fs');
+const path = require('path');
 const { createMetrics } = require('./metrics');
 
 const app = express();
@@ -45,7 +47,75 @@ app.use('/api/v1/products', productLimiter);
 const products = new Map();
 const categories = ['Electronics', 'Clothing', 'Books', 'Home & Garden', 'Sports', 'Beauty', 'Toys', 'Automotive'];
 
-// Generate test products
+// Function to parse CSV data
+function parseCSV(csvText) {
+  const lines = csvText.trim().split('\n');
+  const headers = lines[0].split(',');
+  const result = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',');
+    const obj = {};
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = values[j];
+    }
+    result.push(obj);
+  }
+  
+  return result;
+}
+
+// Load products from CSV file
+async function loadProductsFromCSV() {
+  try {
+    // Path to the CSV file (mounted as volume in Docker)
+    const csvPath = path.join(__dirname, 'data/products.csv');
+    const csvData = fs.readFileSync(csvPath, 'utf8');
+    const csvProducts = parseCSV(csvData);
+    
+    logger.info(`Loading ${csvProducts.length} products from CSV file`);
+    
+    // Process and store products
+    for (const csvProduct of csvProducts) {
+      if (csvProduct.product_id && csvProduct.name && csvProduct.category && csvProduct.price) {
+        const inventory = Math.floor(Math.random() * 1000) + 1;
+        const reviewCount = Math.floor(Math.random() * 500) + 1;
+        const averageRating = Math.round((Math.random() * 2 + 3) * 10) / 10; // 3.0 - 5.0
+        
+        const product = {
+          product_id: csvProduct.product_id,
+          name: csvProduct.name,
+          description: `High-quality ${csvProduct.name.toLowerCase()} perfect for everyday use. Features premium materials and excellent craftsmanship.`,
+          price: parseFloat(csvProduct.price),
+          category: csvProduct.category,
+          inventory_count: inventory,
+          images: [
+            `https://images.shoptech.com/products/${csvProduct.product_id}/image1.jpg`,
+            `https://images.shoptech.com/products/${csvProduct.product_id}/image2.jpg`
+          ],
+          reviews: {
+            average_rating: averageRating,
+            review_count: reviewCount
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        products.set(csvProduct.product_id, product);
+      }
+    }
+    
+    logger.info(`Successfully loaded ${products.size} products from CSV`);
+  } catch (error) {
+    logger.error('Failed to load products from CSV:', error.message);
+    
+    // Fallback to generate test products if CSV loading fails
+    generateTestProducts();
+    logger.warn('Loaded fallback test products due to CSV loading failure');
+  }
+}
+
+// Fallback function to generate test products
 function generateTestProducts() {
   const productNames = [
     'Wireless Headphones', 'Smart Watch', 'Laptop Computer', 'Cotton T-Shirt', 'Running Shoes',
@@ -90,7 +160,8 @@ function generateTestProducts() {
   }
 }
 
-generateTestProducts();
+// Initialize products
+loadProductsFromCSV();
 
 // Middleware to add correlation ID
 app.use((req, res, next) => {
