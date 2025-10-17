@@ -59,7 +59,7 @@ if errorlevel 1 (
     echo ⚠️  Skipping test data generation (Node.js required)
     echo    Test data will be generated when services start
 ) else (
-    node scripts/generate-test-data.js
+    node generate-test-data.js
 )
 
 REM Build and start services
